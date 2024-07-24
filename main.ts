@@ -22,7 +22,11 @@ namespace MotorBitPro {
         //% block="S3"
         S3 = 3,
         //% block="S4"
-        S4 = 4
+        S4 = 4,
+        //% block="S5"
+        S5 = 5,
+        //% block="S6"
+        S6 = 6
     }
 
 
