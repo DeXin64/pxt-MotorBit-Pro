@@ -16,17 +16,17 @@ namespace MotorBitPro {
 
     export enum ServoList {
         //% block="S1"
-        S1 = 1,
+        S1 = 4,
         //% block="S2"
-        S2 = 2,
+        S2 = 5,
         //% block="S3"
-        S3 = 3,
+        S3 = 6,
         //% block="S4"
-        S4 = 4,
+        S4 = 7,
         //% block="S5"
-        S5 = 5,
+        S5 = 8,
         //% block="S6"
-        S6 = 6
+        S6 = 9
     }
 
 
@@ -40,11 +40,21 @@ namespace MotorBitPro {
         S360 = 1
     }
 
+    /**
+    * Unit of Ultrasound Module
+    */
+    export enum SonarUnit {
+        //% block="cm"
+        Cm,
+        //% block="inch"
+        Inch
+    }
+
 
     /******************************************************************************************************
      * 工具函数
      ******************************************************************************************************/
-    function i2c_command_send(command: number, params: number[]) {
+    function i2cCommandSend(command: number, params: number[]) {
         let buff = pins.createBuffer(params.length + 4);
         buff[0] = 0xFF; // 帧头
         buff[1] = 0xF9; // 帧头
@@ -56,6 +66,23 @@ namespace MotorBitPro {
         pins.i2cWriteBuffer(MotorBitProAdd, buff);
     }
 
+    function pwmControl(pwmPin: number, value: number) {
+        let pwmHight = (value >> 8) & 0xFF;
+        let pwmLow = value & 0xFF;
+        i2cCommandSend(0x10, [pwmPin, pwmHight, pwmLow]);
+    }
+
+    function setPwmFrequecy(value: number) {
+        let frequencyHight = (value >> 8) & 0xFF;
+        let requencyLow = value & 0xFF;
+        i2cCommandSend(0x00, [frequencyHight, requencyLow]);
+    }
+
+    function mapInt(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+        if (value <= inMax) return outMin;
+        if (value >= inMax) return outMax;
+        return Math.floor((value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin);
+    }
 
 
 
@@ -67,32 +94,34 @@ namespace MotorBitPro {
      * @param motorPos 电机位置，例如：MotorPos.M1
      * @param speed 速度，例如：100
      */
-    export function setTravelSpeed(motorPos: MotorPos, speed: number): void {
-        // 确定电机的方向和速度
-        let absSpeed = Math.abs(speed); // 取绝对值
-        absSpeed = mapValue(absSpeed, 0, 100, 0, 1000);
-        let absSpeed_16bit = absSpeed; // 此时 absSpeed 已经是在 0-1000 范围内的值
-        let absSpeed_H = (absSpeed_16bit >> 8) & 0xFF; // 注意这里使用 >> 而不是 << 来右移
-        let absSpeed_L = absSpeed_16bit & 0xFF;
-        const direction = speed < 0 ? 0 : 1; // 0 表示反转，1 表示正转
-
-        // 计算电机的偏移量（代表M1A/M1B/M2A/M2B的命令）
-        const motorOffset = (motorPos << 1) | direction; // 00:M1正转，01:M1反转，10:M2正转，11:M2反转
-
-        const pin1 = direction ? motorPos : 1 - motorPos; // 根据direction和motorPos计算第一个引脚
-        const pin2 = direction ? 1 - motorPos : motorPos; // 根据direction和motorPos计算第二个引脚
-        i2c_command_send(0x10, [pin1 * 2, absSpeed_H, absSpeed_L]);
-        i2c_command_send(0x10, [pin2 * 2 + 1, 0, 0]);
-    }
-    function mapValue(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
-        return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
-    }
-    // 注释中的错误已修复，指向正确的参数名
     //% weight=90
     //% group="Basic functions"
-    //% block="Go %motorPos at speed %speed\\%"
+    //% block="set Motor %motorPos speed as %speed\\%"
     //% speed.min=-100 speed.max=100
-    //% motorPos.fieldEditor="gridpicker" motorPos.fieldOptions.columns=2
+    export function setMotorSpeed(motorPos: MotorPos, speed: number): void {
+        // 确定电机的方向和速度, 先将反向PWM脚置为0，再根据speed的值来设置反向PWM脚的值
+        if (speed > 0) {
+            pwmControl(motorPos * 2, 0);
+            pwmControl(motorPos * 2 + 1, mapInt(speed, 0, 100, 0, 2000));
+        } else {
+            pwmControl(motorPos * 2 + 1, 0);
+            pwmControl(motorPos * 2, mapInt(speed, 0, 100, 0, 2000));
+        }
+    }
+
+    /**
+     * 停止所有电机
+     */
+    //% weight=89
+    //% group="Basic functions"
+    //% block="stop all motor\\%"
+    export function stopAllMotor(): void {
+        pwmControl(MotorPos.M1, 0);
+        pwmControl(MotorPos.M1 + 1, 0);
+        pwmControl(MotorPos.M2, 0);
+        pwmControl(MotorPos.M2 + 1, 0);
+    }
+
 
     /**
      * Set the angle of servo. 
@@ -103,22 +132,18 @@ namespace MotorBitPro {
     //% group="Basic functions"
     //% block="Set %ServoTypeList servo %servo angle to %angle °"
     export function setServo(servoType: ServoTypeList, servo: ServoList, angle: number = 0): void {
-        switch (servoType) {
-            case ServoTypeList.S180:
-                angle = Math.map(angle, 0, 180, 0, 1000)
-                break
-            case ServoTypeList.S360:
-                angle = Math.map(angle, 0, 360, 0, 1000)
-                break
+        if (servoType == ServoTypeList.S360) {
+            angle *= 0.5;
         }
-        i2c_command_send(0x20, [servo, angle]);
+        angle = 50 + Math.floor(200 / angle);
+        pwmControl(servo, angle);
     }
 
     /**
-* Set the speed of servo.
-* @param servo ServoList, eg: ServoList.S1
-* @param speed speed of servo, eg: 100
-*/
+    * Set the speed of servo.
+    * @param servo ServoList, eg: ServoList.S1
+    * @param speed speed of servo, eg: 100
+    */
     //% weight=14
     //% group="Basic functions"
     //% block="Set 360° servo %servo speed to %speed \\%"
@@ -126,7 +151,37 @@ namespace MotorBitPro {
     //% servo.fieldOptions.columns=1
     //% speed.min=-100 speed.max=100
     export function setServo360(servo: ServoList, speed: number = 100): void {
-        speed = Math.map(speed, -100, 100, 0, 1000);
-        i2c_command_send(0x20, [servo, speed]);
+        setServo(ServoTypeList.S180, servo, map(speed, -100, 100, 0, 180));
     }
+
+
+    /**
+     * Cars can extend the ultrasonic function to prevent collisions and other functions.. 
+     * @param Sonarunit two states of ultrasonic module, eg: Centimeters
+     */
+    //% blockId=ultrasonic block="HC-SR04 Sonar unit %unit"
+    //% weight=35
+    export function ultrasonic(unit: SonarUnit, maxCmDistance = 500): number {
+        // send pulse
+        let pinTrig = DigitalPin.P8;
+        let pinEcho = DigitalPin.P12;
+
+        pins.setPull(pinTrig, PinPullMode.PullNone);
+        pins.setPull(pinEcho, PinPullMode.PullNone);
+        pins.digitalWritePin(pinTrig, 0);
+        control.waitMicros(2);
+        pins.digitalWritePin(pinTrig, 1);
+        control.waitMicros(10);
+        pins.digitalWritePin(pinTrig, 0);
+        let ts = machine.time_pulse_us(pinEcho, PulseValue.Low, 500)
+        if (ts < 0) return unit == SonarUnit.Cm ? 425 : 167; // err
+        // read pulse
+        ts = pins.pulseIn(pinEcho, PulseValue.High, maxCmDistance * 50);
+        if (ts < 0) return unit == SonarUnit.Cm ? 425 : 167; // err
+
+        return unit == SonarUnit.Cm ? Math.floor(ts * 34 / 2 / 1000) : Math.floor(ts * 34 / 2 / 1000 * 0.3937);
+    }
+
 }
+
+

@@ -5,7 +5,7 @@
   "MotorBitPro.ServoList.S2|block": "S2",
   "MotorBitPro.ServoList.S3|block": "S3",
   "MotorBitPro.ServoList.S4|block": "S4",
-  "MotorBitPro.setTravelSpeed|block": "向 %direc 速度为 %speed\\%",
+  "MotorBitPro.setMotorSpeed|block": "设置电机 %MotorPos 速度为 %speed\\%",
   "MotorBitPro.setServo|block": "设置 %ServoTypeList 舵机 %servo 角度为 %angle °",
   "MotorBitPro.setServo360|block": "设置连续旋转舵机 %servo 以 %speed\\% 速度旋转",
   "MotorBitPro|block": "摩比特Pro",
