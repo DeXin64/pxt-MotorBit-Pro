@@ -56,40 +56,43 @@ namespace MotorBitPro {
         pins.i2cWriteBuffer(MotorBitProAdd, buff);
     }
 
-    function initEvents(): void {
-        if (_initEvents) {
-            pins.setEvents(DigitalPin.P13, PinEventType.Edge);
-            pins.setEvents(DigitalPin.P14, PinEventType.Edge);
-            _initEvents = false;
-        }
-    }
 
 
 
     /******************************************************************************************************
      * 积木块定义
      ******************************************************************************************************/
-
-
     /**
-    * Setting the direction and speed of travel.
-    * @param direc Left wheel speed , eg: DriveDirection.Forward
-    * @param speed Travel time, eg: 100
-    */
+     * 设置电机的方向和速度。
+     * @param motorPos 电机位置，例如：MotorPos.M1
+     * @param speed 速度，例如：100
+     */
+    export function setTravelSpeed(motorPos: MotorPos, speed: number): void {
+        // 确定电机的方向和速度
+        let absSpeed = Math.abs(speed); // 取绝对值
+        absSpeed = mapValue(absSpeed, 0, 100, 0, 1000);
+        let absSpeed_16bit = absSpeed; // 此时 absSpeed 已经是在 0-1000 范围内的值
+        let absSpeed_H = (absSpeed_16bit >> 8) & 0xFF; // 注意这里使用 >> 而不是 << 来右移
+        let absSpeed_L = absSpeed_16bit & 0xFF;
+        const direction = speed < 0 ? 0 : 1; // 0 表示反转，1 表示正转
+
+        // 计算电机的偏移量（代表M1A/M1B/M2A/M2B的命令）
+        const motorOffset = (motorPos << 1) | direction; // 00:M1正转，01:M1反转，10:M2正转，11:M2反转
+
+        const pin1 = direction ? motorPos : 1 - motorPos; // 根据direction和motorPos计算第一个引脚
+        const pin2 = direction ? 1 - motorPos : motorPos; // 根据direction和motorPos计算第二个引脚
+        i2c_command_send(0x10, [pin1 * 2, absSpeed_H, absSpeed_L]);
+        i2c_command_send(0x10, [pin2 * 2 + 1, 0, 0]);
+    }
+    function mapValue(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
+        return (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+    }
+    // 注释中的错误已修复，指向正确的参数名
     //% weight=90
     //% group="Basic functions"
-    //% block="Go %direc at speed %speed\\%"
+    //% block="Go %motorPos at speed %speed\\%"
     //% speed.min=-100 speed.max=100
-    //% direc.fieldEditor="gridpicker" direc.fieldOptions.columns=2
-    export function setTravelSpeed(motorPos: MotorPos, speed: number): void {
-        let direction: number = 0;
-        if (speed < 0) {
-            direction |= 0x01;
-        }
-        speed = Math.min(Math.abs(speed), 100);
-        i2c_command_send(0x10, [speed, direction]);
-    }
-
+    //% motorPos.fieldEditor="gridpicker" motorPos.fieldOptions.columns=2
 
     /**
      * Set the angle of servo. 
@@ -102,10 +105,10 @@ namespace MotorBitPro {
     export function setServo(servoType: ServoTypeList, servo: ServoList, angle: number = 0): void {
         switch (servoType) {
             case ServoTypeList.S180:
-                angle = Math.map(angle, 0, 180, 0, 180)
+                angle = Math.map(angle, 0, 180, 0, 1000)
                 break
             case ServoTypeList.S360:
-                angle = Math.map(angle, 0, 360, 0, 180)
+                angle = Math.map(angle, 0, 360, 0, 1000)
                 break
         }
         i2c_command_send(0x20, [servo, angle]);
@@ -123,7 +126,7 @@ namespace MotorBitPro {
     //% servo.fieldOptions.columns=1
     //% speed.min=-100 speed.max=100
     export function setServo360(servo: ServoList, speed: number = 100): void {
-        speed = Math.map(speed, -100, 100, 0, 180);
+        speed = Math.map(speed, -100, 100, 0, 1000);
         i2c_command_send(0x20, [servo, speed]);
     }
 }
