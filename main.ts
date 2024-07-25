@@ -79,7 +79,7 @@ namespace MotorBitPro {
     }
 
     function mapInt(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {
-        if (value <= inMax) return outMin;
+        if (value <= inMin) return outMin;
         if (value >= inMax) return outMax;
         return Math.floor((value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin);
     }
