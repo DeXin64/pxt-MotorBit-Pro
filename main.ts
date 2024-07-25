@@ -173,7 +173,7 @@ namespace MotorBitPro {
         pins.digitalWritePin(pinTrig, 1);
         control.waitMicros(10);
         pins.digitalWritePin(pinTrig, 0);
-        let ts = machine.time_pulse_us(pinEcho, PulseValue.Low, 500)
+        let ts = pins.pulseIn(pinEcho, PulseValue.Low, 500)
         if (ts < 0) return unit == SonarUnit.Cm ? 425 : 167; // err
         // read pulse
         ts = pins.pulseIn(pinEcho, PulseValue.High, maxCmDistance * 50);
