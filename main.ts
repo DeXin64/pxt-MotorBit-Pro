@@ -105,7 +105,7 @@ namespace MotorBitPro {
             pwmControl(motorPos * 2 + 1, mapInt(speed, 0, 100, 0, 2000));
         } else {
             pwmControl(motorPos * 2 + 1, 0);
-            pwmControl(motorPos * 2, mapInt(speed, 0, 100, 0, 2000));
+            pwmControl(motorPos * 2, mapInt(Math.abs(speed), 0, 100, 0, 2000));
         }
     }
 
