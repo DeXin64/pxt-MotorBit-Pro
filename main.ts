@@ -151,7 +151,7 @@ namespace MotorBitPro {
     //% servo.fieldOptions.columns=1
     //% speed.min=-100 speed.max=100
     export function setServo360(servo: ServoList, speed: number = 100): void {
-        setServo(ServoTypeList.S180, servo, map(speed, -100, 100, 0, 180));
+        setServo(ServoTypeList.S180, servo, Math.map(speed, -100, 100, 0, 180));
     }
 
 
