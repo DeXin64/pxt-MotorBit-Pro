@@ -135,7 +135,7 @@ namespace MotorBitPro {
         if (servoType == ServoTypeList.S360) {
             angle *= 0.5;
         }
-        angle = 50 + Math.floor(200 / angle);
+        angle = 50 + mapInt(angle, 0, 180, 0, 200);
         pwmControl(servo, angle);
     }
 
