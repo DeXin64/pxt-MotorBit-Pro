@@ -116,10 +116,10 @@ namespace MotorBitPro {
     //% group="Basic functions"
     //% block="stop all motor"
     export function stopAllMotor(): void {
-        pwmControl(MotorPos.M1, 0);
-        pwmControl(MotorPos.M1 + 1, 0);
-        pwmControl(MotorPos.M2, 0);
-        pwmControl(MotorPos.M2 + 1, 0);
+        pwmControl(MotorPos.M1 * 2, 0);
+        pwmControl(MotorPos.M1 * 2 + 1, 0);
+        pwmControl(MotorPos.M2 * 2, 0);
+        pwmControl(MotorPos.M2 * 2 + 1, 0);
     }
 
 
