@@ -9,23 +9,23 @@ namespace MotorBitPro {
 
     export enum MotorPos {
         //% block="M1"
-        M1 = 0,
+        M1 = 1,
         //% block="M2"
-        M2 = 1
+        M2 = 0
     }
 
     export enum ServoList {
-        //% block="S1"
+        //% block="S0"
         S1 = 4,
-        //% block="S2"
+        //% block="S1"
         S2 = 5,
-        //% block="S3"
+        //% block="S2"
         S3 = 6,
-        //% block="S4"
+        //% block="S3"
         S4 = 7,
-        //% block="S5"
+        //% block="S4"
         S5 = 8,
-        //% block="S6"
+        //% block="S5"
         S6 = 9
     }
 
